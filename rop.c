@@ -5,8 +5,7 @@
 
 void rop_symbol()
 {
-	system("/bin/ls");
-	printf("%s\n","/bin/sh");
+	system("/bin/ls"); // to make the system link to the binary
 }
 
 void rop_bad_func()

