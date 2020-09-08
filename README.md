@@ -57,8 +57,8 @@ Program Headers:
 ```
 So string "/bin/sh" can be get with the following command: 
 ```
-$grep -aPbo '/bin/sh'   jop |awk -F: '{ printf("0x%x + 0x400000\n",$1) }'
-0x50d10 + 0x400000
+$grep -aPbo '/bin/sh'   rop |awk -F: '{ printf("%x+400000",$1) }' |tr '[a-z]' '[A-Z]'|xargs echo "obase=16;ibase=16;"  |bc
+450d10
 ```
 String "/bin/sh" can be found at address **0x450d10**
 ### ROP example
