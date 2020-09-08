@@ -1,5 +1,5 @@
 ## Return-oriented programming (ROP) and Jump-oriented-programming (JOP) attack examples
-This examples demo using the stack overflow, using the ROP and JOP to start /bin/sh with the system api.
+When the stack overflow occur, this demo show how to use the ROP and JOP to start shell with the system api.
 ### Platform
 Hardware: [Neoverse N1 System Development Platform (N1SDP)](https://community.arm.com/developer/tools-software/oss-platforms/w/docs/457/n1sdp-getting-started-guide) 
 <br>
