@@ -7,3 +7,6 @@ jop:jop.c
 rop:rop.c
 	gcc -g  -fno-stack-protector -o $@  -march=armv8-a -static $<
 	objdump  -S $@  > $@.asm
+
+clean:
+	rm rop rop.asm jop jop.asm -rf 
