@@ -102,9 +102,9 @@ Set X30 = system() api address from stack
    -->(0x400474) main 
       --> (0x44f02c)__deregister_frame_info_bases 
          --> (0x44f080)__deregister_frame_info_bases 
-	    --> system 
-	       --> system 
-	         --> ...
+           --> system 
+             --> system 
+               --> ...
  ```
 ### JOP examples
 ```C
