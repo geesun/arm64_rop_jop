@@ -97,7 +97,13 @@ Set X30 = system() api address from stack
  #### Calling flow
  
  ```
- rop_bad_func -->(0x400474) main --> (0x44f02c)__deregister_frame_info_bases --> (0x44f080)__deregister_frame_info_bases --> system --> system --> ...
+ rop_bad_func 
+   -->(0x400474) main 
+      --> (0x44f02c)__deregister_frame_info_bases 
+         --> (0x44f080)__deregister_frame_info_bases 
+	    --> system 
+	       --> system 
+	         --> ...
  ```
 ### JOP examples
 ```
@@ -154,9 +160,13 @@ Set X30 = gadget 3 address
   441d20:	d61f0200 	br	x16
 ```
 Set X16 = X0 (system address)
+<br>
 Set X0 = "/bin/sh" string address
 #### Calling flow
 ```
-jop_bad_func --> (0x441d84)_dl_runtime_profile --> (0x441cf4)_dl_runtime_profile --> system
+jop_bad_func 
+  --> (0x441d84)_dl_runtime_profile 
+    --> (0x441cf4)_dl_runtime_profile 
+       --> system
 ```
  
